@@ -1,90 +1,178 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Poker Texas Hold'em</title>
+  <title>Texas Hold'em Poker</title>
   <style>
-    body { background: #0a3; color: #fff; font-family: sans-serif; text-align: center; }
-    .cartas, .mesa { margin: 10px auto; display: flex; justify-content: center; gap: 10px; }
-    .carta { width: 50px; height: 75px; background: #fff; color: #000; line-height: 75px; border-radius: 5px; }
-    .botoes button { margin: 5px; padding: 10px 15px; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #101820;
+      color: white;
+    }
+    .table {
+      background-color: #0b3d0b;
+      border: 10px solid #613613;
+      border-radius: 50% / 30%;
+      width: 900px;
+      height: 450px;
+      margin: 50px auto;
+      position: relative;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+    }
+    .player {
+      position: absolute;
+      text-align: center;
+      width: 120px;
+    }
+    .player-name {
+      font-weight: bold;
+    }
+    .action {
+      font-size: 0.9em;
+      color: #FFD700;
+    }
+    .chips {
+      color: #00FF7F;
+    }
+    .cards, .community-cards {
+      display: flex;
+      justify-content: center;
+      margin-top: 5px;
+    }
+    .card {
+      width: 40px;
+      height: 60px;
+      background: white;
+      color: black;
+      border-radius: 6px;
+      margin: 0 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    .community-cards {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .popup {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      border: 2px solid #FFD700;
+      padding: 15px;
+      border-radius: 10px;
+      z-index: 10;
+      display: none;
+    }
+    .controls {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .controls input {
+      padding: 5px;
+      width: 100px;
+    }
+    .controls button {
+      padding: 8px 16px;
+      margin-left: 10px;
+      background-color: #00b894;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>Poker Texas Hold'em</h1>
-  <div><strong>Sua mão:</strong></div>
-  <div id="mao" class="cartas"></div>
-  <div><strong>Cartas na mesa:</strong></div>
-  <div id="mesa" class="mesa"></div>
-  <div class="botoes">
-    <button onclick="acao('call')">Call</button>
-    <button onclick="acao('fold')">Fold</button>
-    <button onclick="acao('raise')">Raise</button>
-    <button onclick="acao('allin')">All‑In</button>
-    <button onclick="novaRodada()">Nova Rodada</button>
+
+<div class="popup" id="popup">Jogador 3 venceu com um Full House!</div>
+
+<div class="table">
+  <!-- Jogadores ao redor da mesa -->
+  <div class="player" style="top: -40px; left: 50%; transform: translateX(-50%);">
+    <div class="player-name">Bot 1</div>
+    <div class="chips">$950</div>
+    <div class="action">All-in</div>
+    <div class="cards">
+      <div class="card">A♠</div><div class="card">A♦</div>
+    </div>
   </div>
-  <p id="status"></p>
+  <div class="player" style="top: 60px; left: 750px;">
+    <div class="player-name">Bot 2</div>
+    <div class="chips">$500</div>
+    <div class="action">Fold</div>
+    <div class="cards">
+      <div class="card">K♠</div><div class="card">7♥</div>
+    </div>
+  </div>
+  <div class="player" style="bottom: -20px; left: 50%; transform: translateX(-50%);">
+    <div class="player-name">Você</div>
+    <div class="chips">$1200</div>
+    <div class="action">Call $200</div>
+    <div class="cards">
+      <div class="card">J♣</div><div class="card">J♠</div>
+    </div>
+  </div>
+  <div class="player" style="top: 60px; left: 50px;">
+    <div class="player-name">Bot 3</div>
+    <div class="chips">$0</div>
+    <div class="action">All-in</div>
+    <div class="cards">
+      <div class="card">Q♠</div><div class="card">Q♥</div>
+    </div>
+  </div>
+  <div class="player" style="top: 150px; left: 10px;">
+    <div class="player-name">Bot 4</div>
+    <div class="chips">$300</div>
+    <div class="action">Call</div>
+    <div class="cards">
+      <div class="card">10♦</div><div class="card">9♦</div>
+    </div>
+  </div>
+  <div class="player" style="top: 150px; right: 10px;">
+    <div class="player-name">Bot 5</div>
+    <div class="chips">$400</div>
+    <div class="action">Check</div>
+    <div class="cards">
+      <div class="card">3♣</div><div class="card">5♠</div>
+    </div>
+  </div>
 
-  <script>
-    const naipes = ['♠','♥','♦','♣'];
-    const valores = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-    let baralho, jogadores, mesaCartas, etapa, pot;
+  <!-- Flop, turn, river -->
+  <div class="community-cards">
+    <div class="card">J♥</div>
+    <div class="card">Q♣</div>
+    <div class="card">J♦</div>
+    <div class="card">A♣</div>
+    <div class="card">10♣</div>
+  </div>
+</div>
 
-    function criarBaralho() {
-      baralho = [];
-      for (let v of valores) for (let n of naipes) baralho.push(v + n);
-      baralho.sort(() => Math.random() - .5);
-    }
-    function distribuir() {
-      jogadores = Array(4).fill().map((_,i) => ({
-        nome: i? `Bot ${i}` : 'Você',
-        mao: [baralho.pop(), baralho.pop()],
-        dinheiro: 1000,
-        ativo: true
-      }));
-      mesaCartas = [];
-      etapa = 0; pot = 0;
-    }
-    function render() {
-      document.getElementById('mao').innerHTML = jogadores[0].mao.map(c => `<div class="carta">${c}</div>`).join('');
-      let mostrar = [];
-      if (etapa>0) mostrar = mesaCartas.slice(0,3);
-      if (etapa>1) mostrar.push(mesaCartas[3]);
-      if (etapa>2) mostrar.push(mesaCartas[4]);
-      document.getElementById('mesa').innerHTML = mostrar.map(c => `<div class="carta">${c}</div>`).join('');
-      document.getElementById('status').innerText = `Etapa: ${['Pré‑flop','Flop','Turn','River'][etapa]}; Pot: R$${pot}`;
-    }
-    function novaRodada() {
-      criarBaralho(); distribuir();
-      for (let i=0;i<5;i++) mesaCartas.push(baralho.pop());
-      render();
-    }
-    function acao(tipo) {
-      if (!jogadores[0].ativo) return;
-      let valor = 0;
-      switch(tipo) {
-        case 'call': valor = 50; break;
-        case 'raise': valor = 100; break;
-        case 'allin': valor = jogadores[0].dinheiro; break;
-        case 'fold': jogadores[0].ativo=false; document.getElementById('status').innerText='Você foldou.'; return;
-      }
-      pot += valor; jogadores[0].dinheiro -= valor;
-      for (let i=1;i<4;i++) {
-        if (jogadores[i].ativo && jogadores[i].dinheiro>=50) {
-          pot += 50; jogadores[i].dinheiro -= 50;
-        } else jogadores[i].ativo = false;
-      }
-      etapa++;
-      render();
-      if (etapa>3) finaliza();
-    }
-    function finaliza(){
-      const vivos = jogadores.filter(j=>j.ativo);
-      const vencedor = vivos[Math.floor(Math.random()*vivos.length)];
-      vencedor.dinheiro += pot;
-      alert(`Vencedor: ${vencedor.nome} – pot R$${pot}`);
-    }
-    novaRodada();
-  </script>
+<div class="controls">
+  <label>Valor do Call:</label>
+  <input type="number" id="callAmount" placeholder="$">
+  <button onclick="doCall()">Call</button>
+  <button onclick="fold()">Fold</button>
+</div>
+
+<script>
+  function doCall() {
+    const amount = document.getElementById('callAmount').value;
+    alert('Você deu call de $' + amount);
+  }
+  function fold() {
+    alert('Você deu Fold. A rodada continua com os bots...');
+    document.getElementById('popup').style.display = 'block';
+    setTimeout(() => document.getElementById('popup').style.display = 'none', 4000);
+  }
+</script>
+
 </body>
 </html>
+
