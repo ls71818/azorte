@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Loteria</title></head>
+<body style="font-family:sans-serif;text-align:center;padding:50px;">
+  <h1>Jogo de Loteria</h1>
+  <p>Escolha 5 números entre 0 e 9 (ex: 1,4,7,8,9)</p>
+  <input id="nums" placeholder="1,2,3,4,5">
+  <button onclick="sortear()">Sortear</button>
+  <p id="res"></p>
+  <script>
+    function sortear(){
+      const apostas = document.getElementById('nums').value.split(',').map(x=>+x.trim());
+      const sorteio = Array.from({length:5},_=>Math.floor(Math.random()*10));
+      const acertos = apostas.filter(n=>sorteio.includes(n)).length;
+      document.getElementById('res').innerText =
+        `Sorteados: ${sorteio.join(', ')} | Acertos: ${acertos}`;
+    }
+  </script>
+</body>
+</html>

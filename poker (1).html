@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Poker Texas Hold'em</title>
+  <style>
+    body { background: #0a3; color: #fff; font-family: sans-serif; text-align: center; }
+    .cartas, .mesa { margin: 10px auto; display: flex; justify-content: center; gap: 10px; }
+    .carta { width: 50px; height: 75px; background: #fff; color: #000; line-height: 75px; border-radius: 5px; }
+    .botoes button { margin: 5px; padding: 10px 15px; }
+  </style>
+</head>
+<body>
+  <h1>Poker Texas Hold'em</h1>
+  <div><strong>Sua mão:</strong></div>
+  <div id="mao" class="cartas"></div>
+  <div><strong>Cartas na mesa:</strong></div>
+  <div id="mesa" class="mesa"></div>
+  <div class="botoes">
+    <button onclick="acao('call')">Call</button>
+    <button onclick="acao('fold')">Fold</button>
+    <button onclick="acao('raise')">Raise</button>
+    <button onclick="acao('allin')">All‑In</button>
+    <button onclick="novaRodada()">Nova Rodada</button>
+  </div>
+  <p id="status"></p>
+
+  <script>
+    const naipes = ['♠','♥','♦','♣'];
+    const valores = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+    let baralho, jogadores, mesaCartas, etapa, pot;
+
+    function criarBaralho() {
+      baralho = [];
+      for (let v of valores) for (let n of naipes) baralho.push(v + n);
+      baralho.sort(() => Math.random() - .5);
+    }
+    function distribuir() {
+      jogadores = Array(4).fill().map((_,i) => ({
+        nome: i? `Bot ${i}` : 'Você',
+        mao: [baralho.pop(), baralho.pop()],
+        dinheiro: 1000,
+        ativo: true
+      }));
+      mesaCartas = [];
+      etapa = 0; pot = 0;
+    }
+    function render() {
+      document.getElementById('mao').innerHTML = jogadores[0].mao.map(c => `<div class="carta">${c}</div>`).join('');
+      let mostrar = [];
+      if (etapa>0) mostrar = mesaCartas.slice(0,3);
+      if (etapa>1) mostrar.push(mesaCartas[3]);
+      if (etapa>2) mostrar.push(mesaCartas[4]);
+      document.getElementById('mesa').innerHTML = mostrar.map(c => `<div class="carta">${c}</div>`).join('');
+      document.getElementById('status').innerText = `Etapa: ${['Pré‑flop','Flop','Turn','River'][etapa]}; Pot: R$${pot}`;
+    }
+    function novaRodada() {
+      criarBaralho(); distribuir();
+      for (let i=0;i<5;i++) mesaCartas.push(baralho.pop());
+      render();
+    }
+    function acao(tipo) {
+      if (!jogadores[0].ativo) return;
+      let valor = 0;
+      switch(tipo) {
+        case 'call': valor = 50; break;
+        case 'raise': valor = 100; break;
+        case 'allin': valor = jogadores[0].dinheiro; break;
+        case 'fold': jogadores[0].ativo=false; document.getElementById('status').innerText='Você foldou.'; return;
+      }
+      pot += valor; jogadores[0].dinheiro -= valor;
+      for (let i=1;i<4;i++) {
+        if (jogadores[i].ativo && jogadores[i].dinheiro>=50) {
+          pot += 50; jogadores[i].dinheiro -= 50;
+        } else jogadores[i].ativo = false;
+      }
+      etapa++;
+      render();
+      if (etapa>3) finaliza();
+    }
+    function finaliza(){
+      const vivos = jogadores.filter(j=>j.ativo);
+      const vencedor = vivos[Math.floor(Math.random()*vivos.length)];
+      vencedor.dinheiro += pot;
+      alert(`Vencedor: ${vencedor.nome} – pot R$${pot}`);
+    }
+    novaRodada();
+  </script>
+</body>
+</html>

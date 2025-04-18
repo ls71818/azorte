@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Pirâmide</title>
+  <style>
+    .grid { display:grid; grid-template-columns:repeat(5,60px); gap:5px; justify-content:center; margin-top:50px; }
+    .c { width:60px; height:60px; background:#ccc; display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px; }
+  </style>
+</head>
+<body style="font-family:sans-serif;text-align:center;">
+  <h1>Pirâmide de Números</h1>
+  <div class="grid" id="g"></div>
+  <script>
+    const g=document.getElementById('g');
+    const v=Array.from({length:15},_=>Math.floor(Math.random()*100));
+    v.forEach(n=>{
+      let d=document.createElement('div');
+      d.className='c'; d.innerText='?';
+      d.onclick=()=>d.innerText=n;
+      g.appendChild(d);
+    });
+  </script>
+</body>
+</html>
