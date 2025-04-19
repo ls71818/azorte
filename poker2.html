@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Texas Hold'em Poker</title>
+  <style>
+    body {
+      font-family: Arial;
+      background-color: #024731;
+      margin: 0;
+      overflow: hidden;
+      color: #fff;
+    }
+    #table {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 900px;
+      height: 500px;
+      background: radial-gradient(circle at center, #116530, #024731);
+      border: 5px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 0 30px #000;
+      position: relative;
+    }
+    .player {
+      position: absolute;
+      width: 100px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .card {
+      width: 40px;
+      height: 60px;
+      background: #fff;
+      border: 1px solid #000;
+      display: inline-block;
+      margin: 2px;
+      line-height: 60px;
+      text-align: center;
+      font-weight: bold;
+      color: black;
+      border-radius: 5px;
+    }
+    .card.back {
+      background: repeating-linear-gradient(45deg, #444, #444 10px, #ccc 10px, #ccc 20px);
+      color: transparent;
+    }
+    #controls {
+      margin-top: 10px;
+      text-align: center;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      background: #FFA500;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #pot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      font-weight: bold;
+    }
+    #community {
+      position: absolute;
+      top: 40%;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+    }
+    #popup {
+      position: fixed;
+      top: 30%;
+      left: 50%;
+      transform: translate(-50%, -30%);
+      background: #fff;
+      color: #000;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+      font-size: 20px;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+  <div id="table">
+    <div id="pot">$0 in pot</div>
+    <div id="community"></div>
+  </div>
+
+  <div id="controls">
+    <input id="callInput" type="number" placeholder="Call $" />
+    <button onclick="call()">Call</button>
+    <input id="raiseInput" type="number" placeholder="Raise $" />
+    <button onclick="raise()">Raise</button>
+    <button onclick="allIn()">All-In</button>
+    <button onclick="fold()">Fold</button>
+    <button onclick="newRound()">Nova Rodada</button>
+  </div>
+
+  <div id="popup"></div>
+
+  <script>
+    const players = [
+      { name: "Você", money: 1000, isUser: true },
+      { name: "Bot 1", money: 1000 },
+      { name: "Bot 2", money: 1000 },
+      { name: "Bot 3", money: 1000 },
+      { name: "Bot 4", money: 1000 },
+      { name: "Bot 5", money: 1000 },
+    ];
+
+    let pot = 0;
+    let communityCards = [];
+    let playerCards = {};
+    let folded = {};
+    let currentBet = 0;
+
+    const hands = ["High Card", "Pair", "Two Pair", "Three of a Kind", "Straight", "Flush", "Full House", "Four of a Kind", "Straight Flush", "Royal Flush"];
+
+    function dealCards() {
+      playerCards = {};
+      folded = {};
+      communityCards = [];
+      pot = 0;
+      currentBet = 0;
+      document.getElementById("community").innerHTML = '';
+      players.forEach((player, i) => {
+        const card1 = randomCard();
+        const card2 = randomCard();
+        playerCards[player.name] = [card1, card2];
+        folded[player.name] = false;
+      });
+      renderPlayers();
+      updatePot();
+    }
+
+    function randomCard() {
+      const suits = ["♠", "♥", "♦", "♣"];
+      const values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+      return values[Math.floor(Math.random() * values.length)] + suits[Math.floor(Math.random() * suits.length)];
+    }
+
+    function renderPlayers() {
+      const table = document.getElementById("table");
+      table.querySelectorAll(".player").forEach(e => e.remove());
+      players.forEach((player, i) => {
+        const angle = (360 / players.length) * i;
+        const x = 400 + 350 * Math.cos((angle - 90) * Math.PI / 180);
+        const y = 220 + 200 * Math.sin((angle - 90) * Math.PI / 180);
+        const div = document.createElement("div");
+        div.className = "player";
+        div.style.left = x + "px";
+        div.style.top = y + "px";
+        div.innerHTML = `
+          <strong>${player.name}</strong><br>
+          $${player.money}<br>
+          ${folded[player.name] ? "(Folded)" : ""}
+          <div>
+            ${player.isUser || showdown ? playerCards[player.name].map(c => `<div class="card">${c}</div>`).join("") : '<div class="card back"></div><div class="card back"></div>'}
+          </div>
+        `;
+        table.appendChild(div);
+      });
+    }
+
+    function updatePot() {
+      document.getElementById("pot").innerText = `$${pot} in pot`;
+    }
+
+    function call() {
+      const amount = parseInt(document.getElementById("callInput").value || "0");
+      if (amount > 0 && amount <= players[0].money) {
+        players[0].money -= amount;
+        pot += amount;
+        botsAct();
+        renderPlayers();
+        updatePot();
+      }
+    }
+
+    function raise() {
+      const amount = parseInt(document.getElementById("raiseInput").value || "0");
+      if (amount > 0 && amount <= players[0].money) {
+        currentBet = amount;
+        players[0].money -= amount;
+        pot += amount;
+        botsAct(true);
+        renderPlayers();
+        updatePot();
+      }
+    }
+
+    function allIn() {
+      const all = players[0].money;
+      players[0].money = 0;
+      pot += all;
+      currentBet = all;
+      botsAct(true);
+      renderPlayers();
+      updatePot();
+    }
+
+    function fold() {
+      folded["Você"] = true;
+      botsAct();
+      renderPlayers();
+      updatePot();
+    }
+
+    function botsAct(raisePhase = false) {
+      players.slice(1).forEach(bot => {
+        if (!folded[bot.name]) {
+          if (raisePhase && Math.random() < 0.5) {
+            folded[bot.name] = true;
+            console.log(`${bot.name} deu Fold`);
+          } else if (Math.random() < 0.5) {
+            const bet = raisePhase ? currentBet : 50;
+            bot.money -= bet;
+            pot += bet;
+            console.log(`${bot.name} pagou $${bet}`);
+          } else {
+            console.log(`${bot.name} deu All-In`);
+            pot += bot.money;
+            bot.money = 0;
+          }
+        }
+      });
+      revealCommunity();
+    }
+
+    let showdown = false;
+
+    function revealCommunity() {
+      const communityDiv = document.getElementById("community");
+      if (communityCards.length === 0) {
+        for (let i = 0; i < 3; i++) communityCards.push(randomCard());
+      } else if (communityCards.length === 3) {
+        communityCards.push(randomCard());
+      } else if (communityCards.length === 4) {
+        communityCards.push(randomCard());
+        endHand();
+      }
+      communityDiv.innerHTML = communityCards.map(c => `<div class="card">${c}</div>`).join("");
+    }
+
+    function endHand() {
+      showdown = true;
+      renderPlayers();
+      const active = players.filter(p => !folded[p.name]);
+      const winner = active[Math.floor(Math.random() * active.length)];
+      winner.money += pot;
+      const handType = hands[Math.floor(Math.random() * hands.length)];
+      document.getElementById("popup").innerText = `${winner.name} venceu com ${handType}!`;
+      document.getElementById("popup").style.display = "block";
+      setTimeout(() => {
+        document.getElementById("popup").style.display = "none";
+      }, 5000);
+      updatePot();
+    }
+
+    function newRound() {
+      showdown = false;
+      dealCards();
+    }
+
+    // Inicializa o jogo
+    dealCards();
+  </script>
+</body>
+</html>
