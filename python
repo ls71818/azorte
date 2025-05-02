@@ -1,0 +1,204 @@
+from flask import Flask, render_template_string
+
+app = Flask(__name__)
+
+html_code = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Texas Hold'em Poker</title>
+  <style>
+    body {
+      background-color: #35654d;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .table {
+      position: relative;
+      margin: 30px auto;
+      width: 800px;
+      height: 500px;
+      border-radius: 50%;
+      background: #2f4f4f;
+      border: 8px solid #222;
+    }
+    .player {
+      position: absolute;
+      width: 120px;
+      height: 80px;
+      background: #444;
+      border-radius: 15px;
+      padding: 5px;
+      font-size: 12px;
+    }
+    .center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .card {
+      width: 40px;
+      height: 60px;
+      background: white;
+      color: black;
+      border: 1px solid black;
+      border-radius: 5px;
+      display: inline-block;
+      margin: 2px;
+      text-align: center;
+      line-height: 60px;
+    }
+    .actions button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 14px;
+    }
+    #popup {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Texas Hold'em Poker</h1>
+  <div class="table">
+    <div class="player" style="top: 0; left: 340px;" id="bot0">Bot 1<br>$1000<br><span class="decision"></span></div>
+    <div class="player" style="top: 100px; left: 670px;" id="bot1">Bot 2<br>$1000<br><span class="decision"></span></div>
+    <div class="player" style="top: 350px; left: 600px;" id="bot2">Bot 3<br>$1000<br><span class="decision"></span></div>
+    <div class="player" style="top: 400px; left: 200px;" id="player">You<br>$1000<br><span class="decision"></span></div>
+    <div class="player" style="top: 350px; left: 20px;" id="bot3">Bot 4<br>$1000<br><span class="decision"></span></div>
+    <div class="player" style="top: 100px; left: 0;" id="bot4">Bot 5<br>$1000<br><span class="decision"></span></div>
+
+    <div class="center">
+      <div id="flop">
+        <div class="card">?</div>
+        <div class="card">?</div>
+        <div class="card">?</div>
+        <div class="card">?</div>
+        <div class="card">?</div>
+      </div>
+      <div id="pot">Pot: $0</div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <input type="number" id="betAmount" placeholder="Enter amount" />
+    <button onclick="raise()">Raise</button>
+    <button onclick="call()">Call</button>
+    <button onclick="allIn()">All In</button>
+    <button onclick="fold()">Fold</button>
+    <button onclick="nextHand()">Next Hand</button>
+  </div>
+
+  <div id="popup"></div>
+
+  <script>
+    let playerMoney = 1000;
+    let botMoney = [1000, 1000, 1000, 1000, 1000];
+    let pot = 0;
+    let playerCards = ["A♠", "K♦"];
+    let flop = ["7♣", "8♣", "9♣", "2♦", "J♠"];
+
+    function updateDisplay() {
+      document.getElementById("player").innerHTML = "You<br>$" + playerMoney + "<br><span class='decision'></span>";
+      for (let i = 0; i < 5; i++) {
+        document.getElementById("bot" + i).innerHTML = "Bot " + (i + 1) + "<br>$" + botMoney[i] + "<br><span class='decision'></span>";
+      }
+      document.getElementById("pot").innerText = "Pot: $" + pot;
+    }
+
+    function showPopup(text) {
+      let popup = document.getElementById("popup");
+      popup.innerText = text;
+      popup.style.display = "block";
+      setTimeout(() => popup.style.display = "none", 3000);
+    }
+
+    function raise() {
+      let amount = parseInt(document.getElementById("betAmount").value);
+      if (amount > 0 && amount <= playerMoney) {
+        playerMoney -= amount;
+        pot += amount;
+        document.querySelector("#player .decision").innerText = "Raise $" + amount;
+        botDecisions();
+        updateDisplay();
+      }
+    }
+
+    function call() {
+      let amount = parseInt(document.getElementById("betAmount").value);
+      if (amount > 0 && amount <= playerMoney) {
+        playerMoney -= amount;
+        pot += amount;
+        document.querySelector("#player .decision").innerText = "Call $" + amount;
+        botDecisions();
+        updateDisplay();
+      }
+    }
+
+    function allIn() {
+      pot += playerMoney;
+      document.querySelector("#player .decision").innerText = "All In $" + playerMoney;
+      playerMoney = 0;
+      botDecisions();
+      updateDisplay();
+    }
+
+    function fold() {
+      document.querySelector("#player .decision").innerText = "Fold";
+      botDecisions(true);
+    }
+
+    function nextHand() {
+      playerCards = ["Q♠", "J♦"];
+      flop = ["5♣", "K♣", "9♣", "10♦", "A♠"];
+      document.getElementById("flop").innerHTML = flop.map(card => `<div class="card">${card}</div>`).join("");
+      document.querySelector("#player .decision").innerText = "";
+      for (let i = 0; i < 5; i++) {
+        document.querySelector("#bot" + i + " .decision").innerText = "";
+      }
+      pot = 0;
+      updateDisplay();
+      showPopup("Winner: Bot 2 with Straight Flush");
+    }
+
+    function botDecisions(skipPlayer = false) {
+      for (let i = 0; i < 5; i++) {
+        if (botMoney[i] <= 0) continue;
+        let action = ["Fold", "Call", "All In"][Math.floor(Math.random() * 3)];
+        let amount = 0;
+        if (action === "Call") {
+          amount = 20;
+        } else if (action === "All In") {
+          amount = botMoney[i];
+        }
+        botMoney[i] -= amount;
+        pot += amount;
+        document.querySelector("#bot" + i + " .decision").innerText = action + (amount ? " $" + amount : "");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("flop").innerHTML = flop.map(card => `<div class="card">${card}</div>`).join("");
+      updateDisplay();
+    });
+  </script>
+</body>
+</html>
+"""
+
+@app.route("/")
+def index():
+    return render_template_string(html_code)
+
+if __name__ == "__main__":
+    app.run(debug=True)
