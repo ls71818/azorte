@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Texas Hold'em Poker with All-In Phase Skip</title>
+  <title>Texas Hold'em Poker with Delayed Reveal on All-Ins</title>
   <style>
     body {
       background-color: #1c472c;
@@ -445,65 +446,11 @@
       raiseBtn.disabled = false;
     }
 
-    // Check how many players are all-in and active (not folded)
     function countAllInPlayers() {
       return playerChips.reduce((count, chips, idx) => {
         if (!foldedPlayers[idx] && chips === 0) return count + 1;
         return count;
       }, 0);
-    }
-
-    function nextPhase() {
-      if (!gameInProgress) return;
-
-      // If two or more all-in players and phase before river, skip to river or showdown
-      const allInCount = countAllInPlayers();
-
-      if (allInCount >= 2) {
-        if (currentPhase === 'pre-flop' || currentPhase === 'flop' || currentPhase === 'turn') {
-          // Reveal all community cards
-          revealCommunityCards(5);
-          currentPhase = 'showdown';
-          phaseIndicator.textContent = 'Phase: Showdown';
-          revealAllPlayerCards();
-          determineWinner();
-          return;
-        }
-      }
-
-      playerCurrentBets.fill(0);
-      currentBet = 0;
-
-      switch (currentPhase) {
-        case 'pre-flop':
-          currentPhase = 'flop';
-          phaseIndicator.textContent = 'Phase: Flop';
-          revealCommunityCards(3);
-          break;
-        case 'flop':
-          currentPhase = 'turn';
-          phaseIndicator.textContent = 'Phase: Turn';
-          revealCommunityCards(4);
-          break;
-        case 'turn':
-          currentPhase = 'river';
-          phaseIndicator.textContent = 'Phase: River';
-          revealCommunityCards(5);
-          break;
-        case 'river':
-          currentPhase = 'showdown';
-          phaseIndicator.textContent = 'Phase: Showdown';
-          revealAllPlayerCards();
-          determineWinner();
-          return;
-      }
-
-      currentPlayerIndex = 0;
-      if (foldedPlayers[currentPlayerIndex]) {
-        advanceTurn();
-      } else {
-        enablePlayerActions();
-      }
     }
 
     function revealCommunityCards(upToIndex) {
@@ -549,6 +496,79 @@
       gameInProgress = false;
       newRoundBtn.style.display = 'inline-block';
       disablePlayerActions();
+    }
+
+    async function handleMultiAllInReveal() {
+      // Reveal turn
+      currentPhase = 'turn';
+      phaseIndicator.textContent = 'Phase: Turn';
+      revealCommunityCards(4);
+      await delay(5000);
+
+      // Reveal river
+      currentPhase = 'river';
+      phaseIndicator.textContent = 'Phase: River';
+      revealCommunityCards(5);
+      await delay(5000);
+
+      // Reveal showdown
+      currentPhase = 'showdown';
+      phaseIndicator.textContent = 'Phase: Showdown';
+      revealAllPlayerCards();
+      await delay(5000);
+
+      determineWinner();
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function nextPhase() {
+      if (!gameInProgress) return;
+
+      const allInCount = countAllInPlayers();
+
+      // If 2 or more all-in before river, trigger delayed reveal sequence
+      if (allInCount >= 2 && (currentPhase === 'pre-flop' || currentPhase === 'flop' || currentPhase === 'turn')) {
+        disablePlayerActions();
+        handleMultiAllInReveal();
+        return;
+      }
+
+      playerCurrentBets.fill(0);
+      currentBet = 0;
+
+      switch (currentPhase) {
+        case 'pre-flop':
+          currentPhase = 'flop';
+          phaseIndicator.textContent = 'Phase: Flop';
+          revealCommunityCards(3);
+          break;
+        case 'flop':
+          currentPhase = 'turn';
+          phaseIndicator.textContent = 'Phase: Turn';
+          revealCommunityCards(4);
+          break;
+        case 'turn':
+          currentPhase = 'river';
+          phaseIndicator.textContent = 'Phase: River';
+          revealCommunityCards(5);
+          break;
+        case 'river':
+          currentPhase = 'showdown';
+          phaseIndicator.textContent = 'Phase: Showdown';
+          revealAllPlayerCards();
+          determineWinner();
+          return;
+      }
+
+      currentPlayerIndex = 0;
+      if (foldedPlayers[currentPlayerIndex]) {
+        advanceTurn();
+      } else {
+        enablePlayerActions();
+      }
     }
 
     foldBtn.addEventListener('click', () => {
